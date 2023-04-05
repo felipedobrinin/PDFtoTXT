@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Dialogo para elejir el pdf
+pdf=$(kdialog --getopenfilename ~/Documentos 'application/pdf')
+
+# Cuento cantidad de paginas para armar la barra de progreso
+steps=$(pdfinfo $pdf | awk '/^Pages:/ {print $2}')
+steps=$(($steps * 2 - 1))
+
+# Creo la barra de progreso
+progressbar=`kdialog --title "PDF to TXT" --progressbar "Inicinado" $steps`
+
+#Creando carpeta temporal
+rm -rf temp # La intento borrar en caso de que el script se haya ejecutado y terminado antes de borrar la carpeta antes
+mkdir "temp"
+
+# Comienzo la barra de progreso
+qdbus $progressbar Set "" value 0
+qdbus $progressbar setLabelText "Separando paginas"
+
+# Sepraro paginas en png's
+pdftoppm $pdf "./temp/" -png
+qdbus $progressbar Set "" value 1
+
+# Convierto los png's a txt
+qdbus $progressbar setLabelText "Convirtiendo paginas"
+images="$(pwd)/temp/*" # Ubicacion del los png's
+for png in $images
+do
+    # Convierto de png a txt
+    tesseract $png $png -l spa txt
+    # Muevo la barra de progreso
+    progreso=$((`qdbus $progressbar Get "" "value"` + 1))
+    qdbus $progressbar Set "" "value" $progreso
+done
+
+# Concatenando los todos los .txt
+qdbus $progressbar setLabelText "Creando .txt final"
+
+file=$(echo $pdf | rev | cut -d '/' -f 1 | rev | cut -d '.' -f 1)
+archivo_final=$(kdialog --getsavefilename ~/Documentos 'text/plain')
+cat $(find ./temp -name '*.txt' | sort -n) > "$archivo_final"
+
+# Moviendo progreso del progress bar
+qdbus $progressbar Set "" "value" $steps
+qdbus $progressbar close
+
+# UNA VEZ TERMINADO DE CONVERTIR EL PDF A TEXTO BORRO LA CARPETA TEMP
+rm -rf temp
+
+# Mensaje de exito final
+kdialog --title "PDF to TXT" --msgbox "$file.pdf a texto fue creado exitosamente"

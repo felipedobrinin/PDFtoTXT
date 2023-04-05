@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Ejecutar como root
+
+if [ $USER != "root" ]; then
+    echo "Te falto el sudo padre"
+    exit
+fi
+
+sudo apt update -y
+sudo apt upgrade -y
+sudo apt install tesseract-ocr libtesseract-dev tesseract-ocr-spa -y
+
+
+mkdir /usr/psico
+sudo cp icono-conversor.png /usr/share/icons/psico_icons/
+sudo cp PDFtoTXT /usr/psico/
+
+sudo echo "[Desktop Entry]
+Name=Conversor de PDF a TXT
+Comment=Ejecutar para convertir un pdf a texto
+Exec=sh /usr/psico/PDFtoTXT
+Icon=/usr/share/icons/psico_icons/icono-conversor.png
+Terminal=false
+Type=Application" > /usr/share/applications/PDFtoTXT.desktop
+
+
+sudo ln -s /usr/share/applications/PDFtoTXT.desktop /home/usuario/Escritorio/
